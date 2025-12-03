@@ -1,0 +1,15 @@
+err_max : 0.15
+if_debug : 1
+
+p_xy: 5000.0
+
+p_R: 0.05
+p_r: 0.1
+
+R_outside: 4.0
+R_inside: 0.1
+
+target_x: 8.0
+target_y: 2.0
+
+vel_track_max: 2.0
