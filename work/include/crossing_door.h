@@ -23,18 +23,18 @@
 using namespace std;
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>全 局 变 量<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-enum Command
-{
-    Move_ENU,
-    Move_Body,
-    Hold,
-    Takeoff,
-    Land,
-    Arm,
-    Disarm,
-    Failsafe_land,
-    Idle
-};
+// enum Command
+// {
+//     Move_ENU,
+//     Move_Body,
+//     Hold,
+//     Takeoff,
+//     Land,
+//     Arm,
+//     Disarm,
+//     Failsafe_land,
+//     Idle
+// };
 
 #define RAD2DEG(x) ((x)*180./M_PI)
 #define Height 480
@@ -46,9 +46,9 @@ float door_y;
 float door_center_x[2];                                         //前两道门的x坐标
 float door_center_y[2];                                         //前两道门的y坐标
 bool reach_door_flag[2];                                        //到达前两道门的标志
-float fly_height;                                               //设定的飞行高度
-Eigen::Quaterniond q_fcu;                                       //飞机姿态四元数
-Eigen::Vector3d Euler_fcu;                                      //飞机姿态欧拉角
+// float fly_height;                                               //设定的飞行高度
+// Eigen::Quaterniond q_fcu;                                       //飞机姿态四元数
+// Eigen::Vector3d Euler_fcu;                                      //飞机姿态欧拉角
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>声 明 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void finddoorcentor(int i);                                                          //通过激光雷达找到门口中心
@@ -60,43 +60,40 @@ void finddoorcentor(int i);                                                     
 
 
 
-    nh.param<float>("door_x", door_x, 1.0);
-    nh.param<float>("door_y", door_y, 1.7);
+    // nh.param<float>("door_x", door_x, 1.0);
+    // nh.param<float>("door_y", door_y, 1.7);
 
-    //获取设定的起飞高度
-    nh.getParam("/px4_pos_controller/Takeoff_height",fly_height);
+    // //获取设定的起飞高度
+    // nh.getParam("/px4_pos_controller/Takeoff_height",fly_height);
 
     //打印现实检查参数
-    printf_param();
 
 
     //初值
-    vel_track[0]= 0;
-    vel_track[1]= 0;
+    // vel_track[0]= 0;
+    // vel_track[1]= 0;
 
-    vel_collision[0]= 0;
-    vel_collision[1]= 0;
+    // vel_collision[0]= 0;
+    // vel_collision[1]= 0;
 
-    vel_sp_body[0]= 0;
-    vel_sp_body[1]= 0;
+    // vel_sp_body[0]= 0;
+    // vel_sp_body[1]= 0;
 
-    vel_sp_ENU[0]= 0;
-    vel_sp_ENU[1]= 0;
+    // vel_sp_ENU[0]= 0;
+    // vel_sp_ENU[1]= 0;
 
     //四向最小距离 初值
-    flag_land = 0;
+    // flag_land = 0;
 
 
     //输出指令初始化
-    int comid = 1;
 
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    while(ros::ok())
-    {
+
         //回调一次 更新传感器状态
         //1. 更新雷达点云数据，存储在Laser中,并计算四向最小距离
-        ros::spinOnce();
+        // ros::spinOnce();
         /**************************dyx****************************************/ //change: just cross one door
         //策略：穿门原理，当穿完最后一道门对墙面人像图片进行识别并计算图片中心xy坐标，导航过去。
         /*
@@ -113,16 +110,20 @@ void finddoorcentor(int i);                                                     
         }
         else if(reach_door_flag[0]&&reach_door_flag[1]) detect_nav();
         */
-        if(!reach_door_flag[0]) //finddoorcentor(0);
-        {
-           collision_avoidance(door_x+0.1,door_y);
-           float abs_distance;
-           abs_distance = sqrt((pos_drone.pose.position.x - door_x - 0.1) * (pos_drone.pose.position.x -door_x - 0.1) + (pos_drone.pose.position.y - door_y) * (pos_drone.pose.position.y - door_y));
-           if(abs_distance < 0.3)
-           {
-              reach_door_flag[0] = true;
-           }
-        }
+
+
+        // if(!reach_door_flag[0]) //finddoorcentor(0);
+        // {
+        //    collision_avoidance(door_x+0.1,door_y);
+        //    float abs_distance;
+        //    abs_distance = sqrt((pos_drone.pose.position.x - door_x - 0.1) * (pos_drone.pose.position.x -door_x - 0.1) + (pos_drone.pose.position.y - door_y) * (pos_drone.pose.position.y - door_y));
+        //    if(abs_distance < 0.3)
+        //    {
+        //       reach_door_flag[0] = true;
+        //    }
+        // }
+
+
         // else if(reach_door_flag[0])
         // {
         //    collision_avoidance(final_x,final_y);

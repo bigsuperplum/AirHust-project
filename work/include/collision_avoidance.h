@@ -10,22 +10,16 @@
 #include <math_utils.h>
 
 using namespace std;
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>全 局 变 量<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-enum Command
-{
-    Move_ENU,
-    Move_Body,
-    Hold,
-    Takeoff,
-    Land,
-    Arm,
-    Disarm,
-    Failsafe_land,
-    Idle
-};
+// //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>全 局 变 量<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+geometry_msgs::TwistStamped setpoint_vel;
+
 //--------------------------------------------输入--------------------------------------------------
 sensor_msgs::LaserScan Laser;                                   //激光雷达点云数据
 geometry_msgs::PoseStamped pos_drone;                                  //无人机当前位置
+
+geometry_msgs::TwistStamped vel_drone;                                  //无人机当前速度
+
 Eigen::Quaterniond q_fcu;
 Eigen::Vector3d Euler_fcu;
 float target_x = 8.0;                                                 //期望位置_x
@@ -53,7 +47,17 @@ std_msgs::Bool flag_collision_avoidance;                       //是否进入避
 float vel_sp_body[2];                                           //总速度
 float vel_sp_ENU[2];                                            //ENU下的总速度
 float vel_sp_max;                                               //总速度限幅
-px4_command::command Command_now;                               //发送给position_control.cpp的命令
+// px4_command::command Command_now;                               //发送给position_control.cpp的命令
+
+// vel_track[0]= 0;
+// vel_track[1]= 0;
+// vel_collision[0]= 0;
+// vel_collision[1]= 0;
+// vel_sp_body[0]= 0;
+// vel_sp_body[1]= 0;
+// vel_sp_ENU[0]= 0;
+// vel_sp_ENU[1]= 0;
+
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>声 明 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void cal_min_distance();
 float satfunc(float data, float Max);
@@ -67,14 +71,18 @@ void rotation_yaw(float yaw_angle, float input[2], float output[2])
     output[0] = input[0] * cos(yaw_angle) - input[1] * sin(yaw_angle);
     output[1] = input[0] * sin(yaw_angle) + input[1] * cos(yaw_angle);
 }
+
+int tmp = 0;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>回 调 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 //接收雷达的数据，并做相应处理,然后计算前后左右四向最小距离
 void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan)
 {
+    if (tmp)
+        return;
     sensor_msgs::LaserScan Laser_tmp;
     Laser_tmp = *scan;
     Laser = *scan;
-    int count;    //count = 359
+    int count;    //count = 359 ?
     count = Laser.ranges.size();
 
     //剔除inf的情况
@@ -98,7 +106,7 @@ void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan)
     }
     for(int i = 0; i < count; i++)
     {
-           if(i+180>359) Laser.ranges[i]=Laser_tmp.ranges[i-180];
+           if (i+180>359) Laser.ranges[i]=Laser_tmp.ranges[i-180];
            else Laser.ranges[i]=Laser_tmp.ranges[i+180];
            //cout<<"tmp: "<<i<<" l:"<<Laser_tmp.ranges[i]<<"|| Laser: "<<Laser.ranges[i]<<endl;
     }
@@ -116,6 +124,17 @@ void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
     //Transform the Quaternion to Euler Angles
     Euler_fcu = quaternion_to_euler(q_fcu);
 }
+
+void vel_cb(const geometry_msgs::TwistStamped::ConstPtr &msg)
+{
+    vel_drone = *msg;
+    // // Read the Quaternion from the Mavros Package [Frame: ENU]
+    // Eigen::Quaterniond q_fcu_enu(msg->pose.orientation.w, msg->pose.orientation.x, msg->pose.orientation.y, msg->pose.orientation.z);
+    // q_fcu = q_fcu_enu;
+    // //Transform the Quaternion to Euler Angles
+    // Euler_fcu = quaternion_to_euler(q_fcu);
+}
+
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 // int main(int argc, char **argv)
 // {
@@ -128,31 +147,31 @@ void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
     // //【订阅】无人机当前位置 坐标系 NED系
     // ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 100, pos_cb);
     // 【发布】发送给position_control.cpp的命令
-    ros::Publisher command_pub = nh.advertise<px4_command::command>("/px4/command", 10);
+    // ros::Publisher command_pub = nh.advertise<px4_command::command>("/px4/command", 10);
 
     //读取参数表中的参数
-    nh.param<float>("target_x", target_x, 1.0); //dyx
-    nh.param<float>("target_y", target_y, 0.0); //dyx
+    // nh.param<float>("target_x", target_x, 1.0); //dyx
+    // nh.param<float>("target_y", target_y, 0.0); //dyx
 
-    nh.param<float>("R_outside", R_outside, 2);
-    nh.param<float>("R_inside", R_inside, 1);
+    // nh.param<float>("R_outside", R_outside, 2);
+    // nh.param<float>("R_inside", R_inside, 1);
 
-    nh.param<float>("p_xy", p_xy, 0.5);
+    // nh.param<float>("p_xy", p_xy, 0.5);
 
-    nh.param<float>("vel_track_max", vel_track_max, 0.5);
+    // nh.param<float>("vel_track_max", vel_track_max, 0.5);
 
-    nh.param<float>("p_R", p_R, 0.0);
-    nh.param<float>("p_r", p_r, 0.0);
+    // nh.param<float>("p_R", p_R, 0.0);
+    // nh.param<float>("p_r", p_r, 0.0);
 
-    nh.param<float>("vel_collision_max", vel_collision_max, 0.0);
-    nh.param<float>("vel_sp_max", vel_sp_max, 0.0);
+    // nh.param<float>("vel_collision_max", vel_collision_max, 0.0);
+    // nh.param<float>("vel_sp_max", vel_sp_max, 0.0);
 
-    nh.param<int>("range_min", range_min, 0.0);
-    nh.param<int>("range_max", range_max, 0.0);
-    nh.param<float>("fly_height", fly_height, 0.5);
+    // nh.param<int>("range_min", range_min, 0.0);
+    // nh.param<int>("range_max", range_max, 0.0);
+    // nh.param<float>("fly_height", fly_height, 0.5);
     // nh.getParam("/px4_pos_controller/Takeoff_height",fly_height);
-    //打印现实检查参数
-    printf_param();
+    // //打印现实检查参数
+    // printf_param();
 
     // //check paramater
     // int check_flag;
@@ -190,60 +209,19 @@ void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
     // if(Take_off_flag != 1) return -1;
 
     //初值
-    vel_track[0]= 0;
-    vel_track[1]= 0;
 
-    vel_collision[0]= 0;
-    vel_collision[1]= 0;
+// flag_land = 0;
 
-    vel_sp_body[0]= 0;
-    vel_sp_body[1]= 0;
+// int comid = 1;
 
-    vel_sp_ENU[0]= 0;
-    vel_sp_ENU[1]= 0;
-
-    flag_land = 0;
-
-    int comid = 1;
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-//     while (ros::ok())
-//     {
-//         //回调一次 更新传感器状态
-//         //1. 更新雷达点云数据，存储在Laser中,并计算四向最小距离
-//         ros::spinOnce();
-//         collision_avoidance(target_x,target_y);
-
-//         Command_now.command = Move_ENU;     //机体系下移动
-//         Command_now.comid = comid;
-//         comid++;
-//         Command_now.sub_mode = 2; // xy 速度控制模式 z 位置控制模式
-//         Command_now.vel_sp[0] =  vel_sp_ENU[0];
-//         Command_now.vel_sp[1] =  vel_sp_ENU[1];  //ENU frame
-//         Command_now.pos_sp[2] =  fly_height;
-//         Command_now.yaw_sp = 0 ;
-
-//         float abs_distance;
-//         abs_distance = sqrt((pos_drone.pose.position.x - target_x) * (pos_drone.pose.position.x - target_x) + (pos_drone.pose.position.y - target_y) * (pos_drone.pose.position.y - target_y));
-//         if(abs_distance < 0.3 || flag_land == 1)
-//         {
-//             Command_now.command = 3;     //Land
-//             flag_land = 1;
-//         }
-//         if(flag_land == 1) Command_now.command = Land;
-//         command_pub.publish(Command_now);
-//         //打印
-//         printf();
-//         rate.sleep();
-//     }
-//     return 0;
-// }
 
 //计算前后左右四向最小距离
 void cal_min_distance()
 {
-    distance_c = Laser.ranges[range_min];
-    angle_c = 0;
-    for (int i = range_min; i <= range_max; i++)
+    tmp = 1;
+    distance_c = Laser.ranges[range_max];
+    angle_c = range_max;
+    for (int i = range_max; i >= range_min; i--)
     {
         if(Laser.ranges[i] < distance_c)
         {
@@ -251,19 +229,22 @@ void cal_min_distance()
             angle_c = i;
         }
     }
+    tmp = 0;
 }
 
 //饱和函数
 float satfunc(float data, float Max)
 {
-    if(abs(data)>Max) return ( data > 0 ) ? Max : -Max;
-    else return data;
+    if(abs(data)>Max) 
+        return ( data > 0 ) ? Max : -Max;
+    else 
+        return data;
 }
 
 void collision_avoidance(float target_x,float target_y)
 {
     //2. 根据最小距离判断：是否启用避障策略
-    if (distance_c >= R_outside )
+    if (distance_c >= R_outside)
     {
         flag_collision_avoidance.data = false;
     }
@@ -310,24 +291,24 @@ void collision_avoidance(float target_x,float target_y)
         }
 
         //大幅度抑制移动速度
-        if(distance_c <= R_inside )
+        if(distance_c <= R_inside)
         {
             F_c = p_R * (R_outside - R_inside) + p_r * (R_inside - distance_c);
         }
 
-        if(distance_cx > 0)
-        {
-            vel_collision[0] = vel_collision[0] - F_c * distance_cx /distance_c;
-        }else{
-            vel_collision[0] = vel_collision[0] - F_c * distance_cx /distance_c;
-        }
+        // if(distance_cx > 0)
+        // {
+            vel_collision[0] = vel_collision[0] - F_c * distance_cx / distance_c;
+        // }else{
+        //     vel_collision[0] = vel_collision[0] - F_c * distance_cx / distance_c;
+        // }
 
-        if(distance_cy > 0)
-        {
+        // if(distance_cy > 0)
+        // {
             vel_collision[1] = vel_collision[1] - F_c * distance_cy / distance_c;
-        }else{
-            vel_collision[1] = vel_collision[1] - F_c * distance_cy /distance_c;
-        }
+        // }else{
+        //     vel_collision[1] = vel_collision[1] - F_c * distance_cy / distance_c;
+        // }
         //避障速度限幅
         for (int i = 0; i < 2; i++)
         {
@@ -343,19 +324,21 @@ void collision_avoidance(float target_x,float target_y)
     //比如，y方向接近0，但x还差很多，但x方向有障碍，这个时候按discx cy的大小，缓解y的难题。
 
     for (int i = 0; i < 2; i++)
-    {
         vel_sp_body[i] = satfunc(vel_sp_body[i],vel_sp_max);
-    }
     rotation_yaw(Euler_fcu[2],vel_sp_body,vel_sp_ENU);
 
-    setpoint_raw.type_mask = /*1 + 2 + 4 + 8 + 16 + */ 32 + 64 + 128 + 256 + 512 /*+ 1024 */ + 2048;
+    setpoint_raw.type_mask = 1 + 2 + 4 + /*8 + 16 + 32 + */ 64 + 128 + 256 + 512 /*+ 1024 */ + 2048;
 	setpoint_raw.coordinate_frame = 1;
-	// setpoint_raw.position.x = x + init_position_x_take_off;
-	// setpoint_raw.position.y = y + init_position_y_take_off;
-	// setpoint_raw.position.z = z + init_position_z_take_off;
-	setpoint_raw.velocity.x = vel_sp_ENU[0];
+	// setpoint_raw.position.x = target_x;
+	// setpoint_raw.position.y = target_y;
+	// setpoint_raw.position.z = 1.0;
+    setpoint_raw.velocity.x = vel_sp_ENU[0];
 	setpoint_raw.velocity.y = vel_sp_ENU[1];
-	setpoint_raw.yaw = target_yaw;
+	setpoint_raw.velocity.z = 0.0;
+
+	// setpoint_vel.linear.x = vel_sp_ENU[0];
+	// setpoint_vel.linear.y = vel_sp_ENU[1];
+	setpoint_raw.yaw = 0;
 }
 
 void printf()
@@ -382,6 +365,10 @@ void printf()
 
     cout << "vel_sp_x : " << vel_sp_ENU[0] << " [m/s] "<<endl;
     cout << "vel_sp_y : " << vel_sp_ENU[1] << " [m/s] "<<endl;
+
+    cout << "x: " << pos_drone.pose.position.x << " [m] "<<endl;
+    cout << "y: " << pos_drone.pose.position.y << " [m] "<<endl;
+    cout << "z: " << pos_drone.pose.position.z << " [m] "<<endl;
 }
 
 void printf_param()

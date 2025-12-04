@@ -37,8 +37,8 @@ include_directories(
 )
 
 
-## add_executable(work src/template.cpp)
-## target_link_libraries(work ${catkin_LIBRARIES} )
+add_executable(task src/task.cpp)
+target_link_libraries(task ${catkin_LIBRARIES} )
 
 add_executable(work src/work.cpp)
 target_link_libraries(work ${catkin_LIBRARIES} )
