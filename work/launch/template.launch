@@ -1,5 +1,0 @@
-<launch>
-  <node pkg="work" type="task" name="" output="screen">
-    <rosparam command="load" file="$(find work)/config/template.yaml" />
-  </node>
-</launch>
