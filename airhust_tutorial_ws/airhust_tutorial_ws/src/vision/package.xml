@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>vision</name>
+  <version>0.1.0</version>
+  <description>Fly control function library for drones</description>
+  <maintainer email="hus-king@hust.edu.cn">Your Name</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- 所有在 CMakeLists.txt 中 find_package(catkin REQUIRED COMPONENTS ...) 出现的包 -->
+  <depend>roscpp</depend>
+  <depend>rospy</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>   <!-- 添加这一行 -->
+  <depend>mavros_msgs</depend>
+  <depend>tf</depend>        <!-- 如果你在 CMake 中用了 tf，也必须加 -->
+
+  <!-- 第三方库（非 ROS 包）用 system_depend 或直接省略，但 cv_bridge/image_transport 是 ROS 包 -->
+  <depend>cv_bridge</depend>
+  <depend>image_transport</depend>
+
+  <!-- 注意：libzbar-dev 和 opencv 不是 ROS 包，不应写成 <depend> -->
+  <!-- 它们由 CMake 的 find_package / pkg_check_modules 处理，无需在 package.xml 声明 -->
+
+</package>

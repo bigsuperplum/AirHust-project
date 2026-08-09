@@ -1,0 +1,5 @@
+<launch>
+  <node pkg="vision" type="vision_node" name="vision_node" output="screen">
+    <rosparam command="load" file="$(find vision)/config/vision.yaml" />
+  </node>
+</launch>
